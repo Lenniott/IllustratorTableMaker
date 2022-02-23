@@ -17,4 +17,6 @@ Table creation UI is a dialog window so you are unable to click out of the UI wi
 
 Edit table window is a panel window which allows clickablness outside of the window.
 
+I have made a video here to show some functionality https://www.youtube.com/watch?v=2HDY3C3Sww8
+
 Enjoy
