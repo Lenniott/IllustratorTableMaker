@@ -661,7 +661,8 @@ var importCSVBtn = Controls.add("button", undefined, undefined, {name: "importCS
     importCSVBtn.preferredSize.width = 100; 
 
     importCSVBtn.onClick = function (){
-     var path = File.openDialog("choose CSV")
+     var path = File.openDialog("choose CSV");
+     if(path!=null){
      var pathString = path.toString()
           if(pathString.substr(pathString.length-3,pathString.length)!="csv"){
                alert("Please pick a CSV file")
@@ -678,6 +679,7 @@ var importCSVBtn = Controls.add("button", undefined, undefined, {name: "importCS
           tmpTableInfo.size = [418,0]
           tmpTableInfo.enabled = false
           }
+        }
     }
 
 var savePreset = Controls.add("button", undefined, undefined, {name: "savePreset"}); 
@@ -975,6 +977,7 @@ editWindow.show()
     }
 
 
+
 OkayBtn.onClick = function (){
 
     var tableLayerName = tmpTableNameValue.text.toString()
@@ -1053,8 +1056,9 @@ OkayBtn.onClick = function (){
         $.sleep(10);
 
         var layer = doc.layers.getByName(tableLayerName);
+        var len = table.data.length;
 //make shapes and text frames
-        for(var r=0;r<table.data.length;r++){
+        for(var r=0;r<len;r++){
             for(var c =0 ;c<table.data[r].length;c++){
                 var row = r+1;
                 var col = c+1;
@@ -1063,18 +1067,22 @@ OkayBtn.onClick = function (){
                 var cellShape = [-100,100,thisTableOptions.cellWidth,cellHeight];
                 var textBox = forTextBox(cellShape,edgeTextGap);
                 var cellText = table.data[r][c];
-
+                if(cellText==""){cellText="_"}
                 makeRec(tableLayerName,cellShapeName,cellShape,hexToRgb(thisTableOptions.cellColor),false)
+                var shapeLayer = layer.pathItems.getByName(cellShapeName);
+                
                 addText(tableLayerName,cellText,tName,thisTableOptions.cellFontSize,font,makeRec(tableLayerName,cellShapeName,textBox,hexToRgb(thisTableOptions.cellColor),true))
 
-
                 var textLayer = layer.textFrames.getByName(tName);
-                var shapeLayer = layer.pathItems.getByName(cellShapeName);
+
                 changeTextColor(shapeLayer.fillColor,textLayer.textRange.characterAttributes.fillColor)
                 if(hasOverflow(textLayer)){
                 fitFrame(textLayer)
                 refitShape(shapeLayer,textLayer,edgeTextGap)
                 }
+                
+                $.sleep(50);
+                            
             }
         }
 //reconfigure shapes to matach largest in row and Column       
@@ -1341,6 +1349,7 @@ function changeTextColor(color1,color2){
                 color2.blue = 0
             }
         }
+        $.sleep(50);
     }
     
     function luminance(red, green, blue) {
@@ -1685,11 +1694,12 @@ function reSetCells(edgeTextGap,layerName,maxRow,maxCol){
      var allText = doc.layers.getByName(layerName).textFrames;
      var colLeft = 0;
      var rowTop = 0;
+    
      for(sc=1;sc<maxCol+1;sc++){//for the each column
           var newLeft = colLeft
           
           for(sr=1;sr<maxRow+1;sr++){       
-               
+
                var cell = allShapes.getByName("r-"+sr+"_c-"+sc);
                var cellText = allText.getByName("txt_r-"+sr+"_c-"+sc)
                if(sc>1){
@@ -1701,20 +1711,20 @@ function reSetCells(edgeTextGap,layerName,maxRow,maxCol){
                }
 
           }
+          $.sleep(20) 
      }
-     $.sleep(20) 
+     
      for(sr=1;sr<maxRow+1;sr++){//for the each column
-          var newTop = rowTop
-          
-          for(sc=1;sc<maxCol+1;sc++){       
+          var newTop = rowTop;
+          for(sc=1;sc<maxCol+1;sc++){    
                var cell = allShapes.getByName("r-"+sr+"_c-"+sc);
-               var cellText = allText.getByName("txt_r-"+sr+"_c-"+sc)             
+               var cellText = allText.getByName("txt_r-"+sr+"_c-"+sc);             
                if(sr>1){
-               cell.top = newTop
-               cellText.top = newTop-edgeTextGap
+               cell.top = newTop;
+               cellText.top = newTop-edgeTextGap;
                }
                else{                   
-                    rowTop = cell.top
+                    rowTop = cell.top;
                }
           }
      }
@@ -1887,32 +1897,34 @@ function fitFrame(textFrame) { // textFrame must be a TextFrameItem
 }
     
 function openCSV (file){
-     var data = [];
-     var oldTable = [];
-     var maxRow = 0;
-     var maxCol = 0;
-     file.open();
-     do{data.push(file.read());
-     }while(!file.eof);
-     file.close();
-     oldTable = data.toString().split("\n");
-     var finalTable = []
-     for (var r = 0; r <oldTable.length;r++){
-         var oldRow = oldTable[r].split(",");
-         var youKnow = []
-         if(r+1>maxRow){maxRow=r+1}
-         for (c=0;c<oldRow.length;c++){
-                 youKnow.push(oldRow[c])
-                 if(c+1>maxCol){maxCol = c+1}
-         }
-         finalTable.push(youKnow)
-     }
-     var table = {
-          data: finalTable,
-          maxRow: maxRow,
-          maxCol: maxCol
-     }
-     return table;
+    var data = [];
+    var oldTable = [];
+    var maxRow = 0;
+    var maxCol = 0;
+    file.open();
+    do{data.push(file.read());
+    }while(!file.eof);
+    file.close();
+    oldTable = data.toString().split("\n");
+    var finalTable = []
+    var reg = /,(?!\s)/gmi;
+    for (var r = 0; r <oldTable.length;r++){
+        var format = oldTable[r].replace(reg,"|$1")
+        var oldRow = format.split("|");
+        var youKnow = []
+        if(r+1>maxRow){maxRow=r+1}
+        for (c=0;c<oldRow.length;c++){
+                youKnow.push(oldRow[c])
+                if(c+1>maxCol){maxCol = c+1}
+        }
+        finalTable.push(youKnow)
+    }
+    var table = {
+         data: finalTable,
+         maxRow: maxRow,
+         maxCol: maxCol
+    }
+    return table;
 }
 
 function addText(tableLayerName,content,tName,fontSize,fontName,box){
